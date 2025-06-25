@@ -100,10 +100,12 @@ def main():
                   f"Used in Relocations: {entry['reloc_count']}")
 
     elif os.path.isdir(path):
+        from pathlib import Path
         import json
 
+        dir = Path(path)
         # Get all .o files
-        OBJECT_FILES = [f for f in os.listdir(path) if f.endswith('.o')]
+        OBJECT_FILES = [f.name for f in dir.iterdir() if f.name.endswith('.o')]
 
         # Map symbol name -> list[object files that define it]
         symbol_objects_map: dict[str, list[str]] = {}
@@ -113,7 +115,7 @@ def main():
         # First pass: collect symbol definitions
         for obj in OBJECT_FILES:
             print(obj)
-            with open(obj, 'rb') as f:
+            with open(dir / obj, 'rb') as f:
                 elf = ELFFile(f)
                 symbols = object_symbols(elf)
                 object_symbols_map[obj] = symbols
