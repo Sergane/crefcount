@@ -102,6 +102,7 @@ def main():
     elif os.path.isdir(path):
         from pathlib import Path
         import json
+        from progressbar import FormatCustomText, Percentage,  Bar, Timer, SmoothingETA, ProgressBar
 
         dir = Path(path)
         # Get all .o files
@@ -112,9 +113,16 @@ def main():
         # Map object file -> tuple(local symbol names, global symbol entries)
         object_symbols_map: dict[str, ObjectSymbols] = {}
 
+        file_status = FormatCustomText(
+            f'%(filename)s [%(number)s of {len(OBJECT_FILES)}]',
+            {'filename': 'Initializing...', 'number': 1}
+        )
+        widgets = [file_status, ' ', Percentage(), ' ', Bar(), ' ',  Timer(), ' | ', SmoothingETA()]
+        pbar = ProgressBar(widgets=widgets, max_value=len(OBJECT_FILES), redirect_stdout=True).start()
+
         # First pass: collect symbol definitions
-        for obj in OBJECT_FILES:
-            print(obj)
+        for i, obj in enumerate(OBJECT_FILES):
+            file_status.update_mapping(filename=obj, number=i+1)
             with open(dir / obj, 'rb') as f:
                 elf = ELFFile(f)
                 symbols = object_symbols(elf)
@@ -123,6 +131,9 @@ def main():
                     if sym not in symbol_objects_map:
                         symbol_objects_map[sym] = []
                     symbol_objects_map[sym].append(obj)
+            pbar.update(i+1)
+            print(obj)
+        pbar.finish()
 
         # Second pass: collect object names where globals defined
         for obj, symbols in object_symbols_map.items():
