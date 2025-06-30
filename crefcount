@@ -78,17 +78,22 @@ def object_symbols(elf):
 
 
 def main():
-    import sys
-    import os
+    import argparse
+    from pathlib import Path
 
-    if len(sys.argv) != 2:
-        print("Usage: python script.py <object_file>|<object_directory>")
-        return
+    parser = argparse.ArgumentParser(
+                    prog='crefcount',
+                    description='ELF Symbol Cross-Reference Counter')
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('-f', '--file', type=Path, help='path to object file (ignores -o option)')
+    parser.add_argument('-C','--directory', type=Path, default=Path('.'), help='relative file paths are considered relative to this directory')
+    parser.add_argument('-o', '--out', type=Path, default=Path('objects.json'), help='path to output json file')
+    args = parser.parse_args()
 
-    path = sys.argv[1]
-    if os.path.isfile(path):
-        with open(path, 'rb') as f:
-            symbols = object_symbols(f)
+    if args.file:
+        with open(args.directory / args.file, 'rb') as f:
+            elf = ELFFile(f)
+            symbols = object_symbols(elf)
 
         print(f"Known (Defined) Symbols ({len(symbols.locals)}):")
         for name in symbols.locals:
@@ -99,14 +104,13 @@ def main():
             print(f"  Name: {entry['name']}, "
                   f"Used in Relocations: {entry['reloc_count']}")
 
-    elif os.path.isdir(path):
-        from pathlib import Path
+
+    elif args.directory:
         import json
         from progressbar import FormatCustomText, Percentage,  Bar, Timer, SmoothingETA, ProgressBar
 
-        dir = Path(path)
         # Get all .o files
-        OBJECT_FILES = [f.name for f in dir.iterdir() if f.name.endswith('.o')]
+        OBJECT_FILES = [f.name for f in args.directory.iterdir() if f.name.endswith('.o')]
 
         # Map symbol name -> list[object files that define it]
         symbol_objects_map: dict[str, list[str]] = {}
@@ -122,8 +126,14 @@ def main():
 
         # First pass: collect symbol definitions
         for i, obj in enumerate(OBJECT_FILES):
-            file_status.update_mapping(filename=obj, number=i+1)
-            with open(dir / obj, 'rb') as f:
+            filepath = Path(obj)
+            if filepath.is_absolute():
+                filepath = filepath.resolve()
+                obj = str(filepath)
+            else:
+                filepath = args.directory / obj
+            file_status.update_mapping(filename=filepath, number=i+1)
+            with open(filepath, 'rb') as f:
                 elf = ELFFile(f)
                 symbols = object_symbols(elf)
                 object_symbols_map[obj] = symbols
@@ -142,12 +152,8 @@ def main():
                     continue
                 sym['obj'].extend(symbol_objects_map[sym['name']])
 
-        with open('objects.json', 'w') as json_file:
+        with open(args.out, 'w') as json_file:
             json.dump(object_symbols_map, json_file, indent=2)
-
-    else:
-        print(f"'{path}' does not exist or is not a file/directory.")
-        exit(1)
 
 if __name__ == '__main__':
     main()
