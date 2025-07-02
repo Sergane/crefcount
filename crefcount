@@ -6,6 +6,7 @@ from elftools.elf.sections import SymbolTableSection
 from collections import defaultdict
 from collections import namedtuple
 from pathlib import Path
+import subprocess
 
 
 def symbol_info(elf):
@@ -71,10 +72,42 @@ def object_symbols(elf):
             entry = {
                 'name': name,
                 # 'type': info['type'],
-                'reloc_count': count,
+                'count': count,
                 'obj': []
             }
             globals.append(entry)
+    return ObjectSymbols(locals, globals)
+
+
+def run_nm(args):
+    try:
+        result = subprocess.run(['nm', *args],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with error: {e.stderr}")
+        raise
+    except FileNotFoundError:
+        raise FileNotFoundError("The `nm` utility is not installed or not in the system PATH.")
+
+
+def library_symbols(libpath):
+    locals = run_nm(['-Ugj', libpath]).split()
+    global_names = run_nm(['-uj', libpath]).split()
+    globals = []
+    for name in global_names:
+        appeared = False
+        for entry in globals:
+            if entry['name'] == name:
+                entry['count'] += 1
+                appeared = True
+                break
+        if not appeared:
+            globals.append({'name': name, 'count': 1, 'obj': []})
     return ObjectSymbols(locals, globals)
 
 
@@ -112,7 +145,7 @@ def main():
         print(f"\nUnknown (Undefined) Symbols ({len(symbols.globals)}):")
         for entry in symbols.globals:
             print(f"  Name: {entry['name']}, "
-                  f"Used in Relocations: {entry['reloc_count']}")
+                  f"Used in Relocations: {entry['count']}")
 
 
     else:
@@ -121,20 +154,20 @@ def main():
 
         directory = args.directory
 
-        # Get all .o files
+        # Get all .o and .a files
         OBJECT_FILES = []
         if args.depfile:
             with open(args.depfile, 'r') as f:
                 for rawline in f:
                     line = rawline.strip()
-                    if line.endswith('.o:'):
+                    if line.endswith('.o:') or line.endswith('.a:'):
                         OBJECT_FILES.append(line.rstrip(':'))
             if not directory:
                 directory = common_directory(args.depfile, OBJECT_FILES)
         else:
             if not directory:
                 directory = Path('.')
-            OBJECT_FILES = [f.name for f in directory.iterdir() if f.name.endswith('.o')]
+            OBJECT_FILES = [f.name for f in directory.iterdir() if f.name.endswith('.o') or f.name.endswith('.a')]
 
         # Map symbol name -> list[object files that define it]
         symbol_objects_map: dict[str, list[str]] = {}
@@ -157,14 +190,17 @@ def main():
             else:
                 filepath = directory / obj
             file_status.update_mapping(filename=filepath, number=i+1)
-            with open(filepath, 'rb') as f:
-                elf = ELFFile(f)
-                symbols = object_symbols(elf)
-                object_symbols_map[obj] = symbols
-                for sym in symbols.locals:
-                    if sym not in symbol_objects_map:
-                        symbol_objects_map[sym] = []
-                    symbol_objects_map[sym].append(obj)
+            if obj.endswith('.o'):  # object file
+                with open(filepath, 'rb') as f:
+                    elf = ELFFile(f)
+                    symbols = object_symbols(elf)
+            if obj.endswith('.a'):  # static library
+                symbols = library_symbols(filepath)
+            object_symbols_map[obj] = symbols
+            for sym in symbols.locals:
+                if sym not in symbol_objects_map:
+                    symbol_objects_map[sym] = []
+                symbol_objects_map[sym].append(obj)
             pbar.update(i+1)
             print(obj)
         pbar.finish()

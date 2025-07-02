@@ -15,9 +15,14 @@ The script generates a JSON output that lists, for each object file:
 /usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtbeginT.o
 CMakeFiles/main.dir/main.c.o
 CMakeFiles/main.dir/a.c.o
+libB.a
+libC.a
+/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/libgcc.a
+/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/libgcc_eh.a
+/usr/lib/libc.a
 /usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtend.o
 /usr/lib/crtn.o
-/usr/lib/crtn.o [7 of 7] 100% |############################################| Elapsed Time: 0:00:00 | Time:  0:00:00
+/usr/lib/crtn.o [12 of 12] 100% |##########################################| Elapsed Time: 0:00:00 | Time:  0:00:00
 ```
 
 
@@ -31,7 +36,7 @@ CMakeFiles/main.dir/a.c.o
     [
       {
         "name": "a_foo",
-        "reloc_count": 2,
+        "count": 2,
         "obj": [
           "CMakeFiles/main.dir/a.c.o"
         ]
@@ -45,10 +50,32 @@ CMakeFiles/main.dir/a.c.o
     [
       {
         "name": "b_foo",
-        "reloc_count": 4,
-        "obj": []
+        "count": 4,
+        "obj": [
+          "libB.a"
+        ]
       }
     ]
+  ],
+  "libB.a": [
+    [
+      "b_foo"
+    ],
+    [
+      {
+        "name": "c_func",
+        "count": 1,
+        "obj": [
+          "libC.a"
+        ]
+      }
+    ]
+  ],
+  "libC.a": [
+    [
+      "c_func"
+    ],
+    []
   ],
   ...
 }
@@ -113,7 +140,7 @@ pip install -r requirements.txt
   Improve symbol detection by analyzing C/C++ headers using Clang AST parsing.
 
 - [ ] **Add static libraries (`.a`) support**  
-  Currently under development — need to fully support symbol extraction and relocation resolution from AR-archives.
+  Partially implemented (object counts instead of relocations) — need to fully support symbol extraction and relocation resolution from AR-archives.
 
 ## License
 
