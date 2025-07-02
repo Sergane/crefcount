@@ -1,0 +1,108 @@
+{
+  "/usr/lib/crt1.o": [
+    [
+      "_dl_relocate_static_pie",
+      "_start",
+      "data_start",
+      "_IO_stdin_used",
+      "__data_start"
+    ],
+    [
+      {
+        "name": "main",
+        "reloc_count": 1,
+        "obj": [
+          "CMakeFiles/main.dir/main.c.o"
+        ]
+      },
+      {
+        "name": "__libc_start_main",
+        "reloc_count": 1,
+        "obj": []
+      }
+    ]
+  ],
+  "/usr/lib/crti.o": [
+    [
+      "_init",
+      "_fini"
+    ],
+    [
+      {
+        "name": "__gmon_start__",
+        "reloc_count": 1,
+        "obj": []
+      }
+    ]
+  ],
+  "/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtbeginT.o": [
+    [
+      "__dso_handle"
+    ],
+    [
+      {
+        "name": "__TMC_END__",
+        "reloc_count": 2,
+        "obj": [
+          "/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtend.o"
+        ]
+      },
+      {
+        "name": "_ITM_deregisterTMCloneTable",
+        "reloc_count": 1,
+        "obj": []
+      },
+      {
+        "name": "_ITM_registerTMCloneTable",
+        "reloc_count": 1,
+        "obj": []
+      },
+      {
+        "name": "__deregister_frame_info",
+        "reloc_count": 2,
+        "obj": []
+      },
+      {
+        "name": "__register_frame_info",
+        "reloc_count": 2,
+        "obj": []
+      }
+    ]
+  ],
+  "CMakeFiles/main.dir/main.c.o": [
+    [
+      "main"
+    ],
+    [
+      {
+        "name": "a_foo",
+        "reloc_count": 2,
+        "obj": [
+          "CMakeFiles/main.dir/a.c.o"
+        ]
+      }
+    ]
+  ],
+  "CMakeFiles/main.dir/a.c.o": [
+    [
+      "a_foo"
+    ],
+    [
+      {
+        "name": "b_foo",
+        "reloc_count": 4,
+        "obj": []
+      }
+    ]
+  ],
+  "/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtend.o": [
+    [
+      "__TMC_END__"
+    ],
+    []
+  ],
+  "/usr/lib/crtn.o": [
+    [],
+    []
+  ]
+}

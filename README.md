@@ -9,18 +9,48 @@ The script generates a JSON output that lists, for each object file:
 1. Symbols **defined** in the object file.
 2. Symbols **referenced** from other object files, along with their relocation count and source object(s).
 
+```
+/usr/lib/crt1.o
+/usr/lib/crti.o
+/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtbeginT.o
+CMakeFiles/main.dir/main.c.o
+CMakeFiles/main.dir/a.c.o
+/usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/crtend.o
+/usr/lib/crtn.o
+/usr/lib/crtn.o [7 of 7] 100% |############################################| Elapsed Time: 0:00:00 | Time:  0:00:00
+```
+
+
 ```json
 {
-  "a.o": [
-    ["a_foo", "a_bar", "a_baz"],
+  ...
+  "CMakeFiles/main.dir/main.c.o": [
     [
-      {"name": "b_foo", "reloc_count": 4, "obj": ["b.o"]}
+      "main"
+    ],
+    [
+      {
+        "name": "a_foo",
+        "reloc_count": 2,
+        "obj": [
+          "CMakeFiles/main.dir/a.c.o"
+        ]
+      }
     ]
   ],
-  "b.o": [
-    ["b_foo"],
-    []
-  ]
+  "CMakeFiles/main.dir/a.c.o": [
+    [
+      "a_foo"
+    ],
+    [
+      {
+        "name": "b_foo",
+        "reloc_count": 4,
+        "obj": []
+      }
+    ]
+  ],
+  ...
 }
 ```
 
@@ -30,15 +60,29 @@ The script generates a JSON output that lists, for each object file:
 ## Usage
 
 ```bash
-crefcount <path_to_elf_or_directory>
+crefcount [-h] [-d DEPFILE | -f FILE] [-C DIRECTORY] [-o OUT]
+
+ELF Symbol Cross-Reference Counter
+
+options:
+  -h, --help            show this help message and exit
+  -d, --depfile DEPFILE
+                        path to depfile from linkers --dependency-file option
+  -f, --file FILE       path to object file (ignores -o option)
+  -C, --directory DIRECTORY
+                        relative file paths are considered relative to this directory
+  -o, --out OUT         path to output json file
 ```
 
 Example:
 ```bash
-./crefcount a.o
-# or with objects in directory dir
-./crefcount path/to/dir
+cd examples/dummy
+cmake -S . -B build && cmake --build build
+crefcount -C build/ -d build/CMakeFiles/main.dir/link.d
+# or for one object only:
+crefcount -f build/CMakeFiles/main.dir/main.c.o
 ```
+See resulting [output json](examples/dummy/objects.json).
 
 ## Dependencies
 
