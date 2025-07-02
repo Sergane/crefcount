@@ -4,6 +4,8 @@ from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
 from elftools.elf.sections import SymbolTableSection
 from collections import defaultdict
+from collections import namedtuple
+from pathlib import Path
 
 
 def symbol_info(elf):
@@ -48,7 +50,6 @@ def relocation_counts(elf):
     return reloc_count
 
 
-from collections import namedtuple
 ObjectSymbols = namedtuple('ObjectSymbols', ['locals', 'globals'])
 
 def object_symbols(elf):
@@ -77,9 +78,17 @@ def object_symbols(elf):
     return ObjectSymbols(locals, globals)
 
 
+def common_directory(depfile: Path, deplist: list[str]):
+    rel_parents_count = 0
+    for filestr in deplist:
+        filepath = Path(filestr)
+        if not filepath.is_absolute():
+            rel_parents_count = max(rel_parents_count, len(filepath.parent.parents))
+    return depfile.parents[rel_parents_count]
+
+
 def main():
     import argparse
-    from pathlib import Path
 
     parser = argparse.ArgumentParser(
                     prog='crefcount',
@@ -87,7 +96,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('-d', '--depfile', type=Path, help='path to depfile from linkers --dependency-file option')
     group.add_argument('-f', '--file', type=Path, help='path to object file (ignores -o option)')
-    parser.add_argument('-C','--directory', type=Path, default=Path('.'), help='relative file paths are considered relative to this directory')
+    parser.add_argument('-C','--directory', type=Path, help='relative file paths are considered relative to this directory')
     parser.add_argument('-o', '--out', type=Path, default=Path('objects.json'), help='path to output json file')
     args = parser.parse_args()
 
@@ -106,9 +115,11 @@ def main():
                   f"Used in Relocations: {entry['reloc_count']}")
 
 
-    elif args.directory:
+    else:
         import json
         from progressbar import FormatCustomText, Percentage,  Bar, Timer, SmoothingETA, ProgressBar
+
+        directory = args.directory
 
         # Get all .o files
         OBJECT_FILES = []
@@ -118,8 +129,12 @@ def main():
                     line = rawline.strip()
                     if line.endswith('.o:'):
                         OBJECT_FILES.append(line.rstrip(':'))
+            if not directory:
+                directory = common_directory(args.depfile, OBJECT_FILES)
         else:
-            OBJECT_FILES = [f.name for f in args.directory.iterdir() if f.name.endswith('.o')]
+            if not directory:
+                directory = Path('.')
+            OBJECT_FILES = [f.name for f in directory.iterdir() if f.name.endswith('.o')]
 
         # Map symbol name -> list[object files that define it]
         symbol_objects_map: dict[str, list[str]] = {}
@@ -140,7 +155,7 @@ def main():
                 filepath = filepath.resolve()
                 obj = str(filepath)
             else:
-                filepath = args.directory / obj
+                filepath = directory / obj
             file_status.update_mapping(filename=filepath, number=i+1)
             with open(filepath, 'rb') as f:
                 elf = ELFFile(f)

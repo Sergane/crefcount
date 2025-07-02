@@ -78,7 +78,7 @@ Example:
 ```bash
 cd examples/dummy
 cmake -S . -B build && cmake --build build
-crefcount -C build/ -d build/CMakeFiles/main.dir/link.d
+crefcount -d build/CMakeFiles/main.dir/link.d
 # or for one object only:
 crefcount -f build/CMakeFiles/main.dir/main.c.o
 ```
