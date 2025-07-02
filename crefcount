@@ -85,6 +85,7 @@ def main():
                     prog='crefcount',
                     description='ELF Symbol Cross-Reference Counter')
     group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument('-d', '--depfile', type=Path, help='path to depfile from linkers --dependency-file option')
     group.add_argument('-f', '--file', type=Path, help='path to object file (ignores -o option)')
     parser.add_argument('-C','--directory', type=Path, default=Path('.'), help='relative file paths are considered relative to this directory')
     parser.add_argument('-o', '--out', type=Path, default=Path('objects.json'), help='path to output json file')
@@ -110,7 +111,15 @@ def main():
         from progressbar import FormatCustomText, Percentage,  Bar, Timer, SmoothingETA, ProgressBar
 
         # Get all .o files
-        OBJECT_FILES = [f.name for f in args.directory.iterdir() if f.name.endswith('.o')]
+        OBJECT_FILES = []
+        if args.depfile:
+            with open(args.depfile, 'r') as f:
+                for rawline in f:
+                    line = rawline.strip()
+                    if line.endswith('.o:'):
+                        OBJECT_FILES.append(line.rstrip(':'))
+        else:
+            OBJECT_FILES = [f.name for f in args.directory.iterdir() if f.name.endswith('.o')]
 
         # Map symbol name -> list[object files that define it]
         symbol_objects_map: dict[str, list[str]] = {}
