@@ -117,7 +117,7 @@ def common_directory(depfile: Path, deplist: list[str]):
         filepath = Path(filestr)
         if not filepath.is_absolute():
             rel_parents_count = max(rel_parents_count, len(filepath.parent.parents))
-    return depfile.parents[rel_parents_count]
+    return depfile.absolute().parents[rel_parents_count]
 
 
 def main():
